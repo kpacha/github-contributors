@@ -75,5 +75,6 @@ func main() {
 }
 
 const (
-	defaultTemplate = `{{range .}}{{.Login}}{{end}}`
+	defaultTemplate = `{{range .}}{{.Login}}
+{{end}}`
 )

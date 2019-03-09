@@ -39,7 +39,6 @@ func main() {
 
 	client := github.NewClient(tc)
 
-	// list public repositories for org "github"
 	opt := &github.RepositoryListByOrgOptions{
 		Type:        "public",
 		ListOptions: github.ListOptions{PerPage: 100},

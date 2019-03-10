@@ -46,8 +46,6 @@ func main() {
 		tc = oauth2.NewClient(ctx, ts)
 	}
 
-	// t := template.Must(template.New("contributors").Parse(*tmpl))
-
 	client := github.NewClient(tc)
 
 	opt := &github.RepositoryListByOrgOptions{
@@ -62,7 +60,7 @@ func main() {
 
 	re := regexp.MustCompile(pattern)
 
-	contributors := map[string]github.Contributor{}
+	contributorsMap := map[string]github.Contributor{}
 	for k, v := range repos {
 		if !re.MatchString(*v.Name) {
 			continue
@@ -74,16 +72,96 @@ func main() {
 			fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
 		}
 		for _, cs := range css {
-			contributors[*cs.Author.Login] = *cs.Author
+			contributorsMap[*cs.Author.Login] = *cs.Author
 		}
+	}
+
+	contributors := []Contributor{}
+	for _, c := range contributorsMap {
+		contributor := Contributor{}
+		if c.Login != nil {
+			contributor.Login = *c.Login
+		}
+		if c.ID != nil {
+			contributor.ID = *c.ID
+		}
+		if c.AvatarURL != nil {
+			contributor.AvatarURL = *c.AvatarURL
+		}
+		if c.GravatarID != nil {
+			contributor.GravatarID = *c.GravatarID
+		}
+		if c.URL != nil {
+			contributor.URL = *c.URL
+		}
+		if c.HTMLURL != nil {
+			contributor.HTMLURL = *c.HTMLURL
+		}
+		if c.FollowersURL != nil {
+			contributor.FollowersURL = *c.FollowersURL
+		}
+		if c.FollowingURL != nil {
+			contributor.FollowingURL = *c.FollowingURL
+		}
+		if c.GistsURL != nil {
+			contributor.GistsURL = *c.GistsURL
+		}
+		if c.StarredURL != nil {
+			contributor.StarredURL = *c.StarredURL
+		}
+		if c.SubscriptionsURL != nil {
+			contributor.SubscriptionsURL = *c.SubscriptionsURL
+		}
+		if c.OrganizationsURL != nil {
+			contributor.OrganizationsURL = *c.OrganizationsURL
+		}
+		if c.ReposURL != nil {
+			contributor.ReposURL = *c.ReposURL
+		}
+		if c.EventsURL != nil {
+			contributor.EventsURL = *c.EventsURL
+		}
+		if c.ReceivedEventsURL != nil {
+			contributor.ReceivedEventsURL = *c.ReceivedEventsURL
+		}
+		if c.Type != nil {
+			contributor.Type = *c.Type
+		}
+		if c.SiteAdmin != nil {
+			contributor.SiteAdmin = *c.SiteAdmin
+		}
+		if c.Contributions != nil {
+			contributor.Contributions = *c.Contributions
+		}
+		contributors = append(contributors, contributor)
 	}
 
 	fmt.Println("dumping contributor stats", len(contributors))
 
 	if err := tfortools.OutputToTemplate(os.Stdout, "contributors", tmpl, contributors, nil); err != nil {
-		// if err := t.Execute(os.Stdout, contributors); err != nil {
 		fmt.Printf("error executing template:", err)
 	}
+}
+
+type Contributor struct {
+	Login             string `json:"login,omitempty"`
+	ID                int64  `json:"id,omitempty"`
+	AvatarURL         string `json:"avatar_url,omitempty"`
+	GravatarID        string `json:"gravatar_id,omitempty"`
+	URL               string `json:"url,omitempty"`
+	HTMLURL           string `json:"html_url,omitempty"`
+	FollowersURL      string `json:"followers_url,omitempty"`
+	FollowingURL      string `json:"following_url,omitempty"`
+	GistsURL          string `json:"gists_url,omitempty"`
+	StarredURL        string `json:"starred_url,omitempty"`
+	SubscriptionsURL  string `json:"subscriptions_url,omitempty"`
+	OrganizationsURL  string `json:"organizations_url,omitempty"`
+	ReposURL          string `json:"repos_url,omitempty"`
+	EventsURL         string `json:"events_url,omitempty"`
+	ReceivedEventsURL string `json:"received_events_url,omitempty"`
+	Type              string `json:"type,omitempty"`
+	SiteAdmin         bool   `json:"site_admin,omitempty"`
+	Contributions     int    `json:"contributions,omitempty"`
 }
 
 const (

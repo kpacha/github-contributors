@@ -7,35 +7,46 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"text/template"
 
 	"github.com/google/go-github/v24/github"
+	"github.com/intel/tfortools"
 	"golang.org/x/oauth2"
 )
 
-func main() {
-	token := flag.String("t", "", "github personal token")
-	pattern := flag.String("p", ".*", "reggex pattern for filtering repos by name")
-	org := flag.String("o", "devopsfaith", "github org")
-	tmpl := flag.String("f", "", "template for render the results")
+var (
+	token   string
+	pattern string
+	org     string
+	tmpl    string
+)
 
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [-f template] [-p pattern] [-o organization] [-t token]\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, tfortools.GenerateUsageUndecorated([][]string{}))
+	}
+	flag.StringVar(&token, "t", "", "github personal token")
+	flag.StringVar(&pattern, "p", ".*", "reggex pattern for filtering repos by name")
+	flag.StringVar(&org, "o", "devopsfaith", "github org")
+	flag.StringVar(&tmpl, "f", defaultTemplate, "template for render the results")
+}
+
+func main() {
 	flag.Parse()
 
 	ctx := context.Background()
 	var tc *http.Client
 
-	if *token != "" {
+	if token != "" {
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: *token},
+			&oauth2.Token{AccessToken: token},
 		)
 		tc = oauth2.NewClient(ctx, ts)
 	}
 
-	if *tmpl == "" {
-		*tmpl = defaultTemplate
-	}
-
-	t := template.Must(template.New("contributors").Parse(*tmpl))
+	// t := template.Must(template.New("contributors").Parse(*tmpl))
 
 	client := github.NewClient(tc)
 
@@ -43,13 +54,13 @@ func main() {
 		Type:        "public",
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
-	repos, _, err := client.Repositories.ListByOrg(ctx, *org, opt)
+	repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
 
 	if err != nil {
 		fmt.Println("error:", err.Error())
 	}
 
-	re := regexp.MustCompile(*pattern)
+	re := regexp.MustCompile(pattern)
 
 	contributors := map[string]github.Contributor{}
 	for k, v := range repos {
@@ -58,7 +69,7 @@ func main() {
 		}
 
 		fmt.Println("repo", k, *v.Name)
-		css, _, err := client.Repositories.ListContributorsStats(ctx, *org, *v.Name)
+		css, _, err := client.Repositories.ListContributorsStats(ctx, org, *v.Name)
 		if err != nil {
 			fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
 		}
@@ -69,7 +80,8 @@ func main() {
 
 	fmt.Println("dumping contributor stats", len(contributors))
 
-	if err := t.Execute(os.Stdout, contributors); err != nil {
+	if err := tfortools.OutputToTemplate(os.Stdout, "contributors", tmpl, contributors, nil); err != nil {
+		// if err := t.Execute(os.Stdout, contributors); err != nil {
 		fmt.Printf("error executing template:", err)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/google/go-github/v24/github"
 	"github.com/intel/tfortools"
@@ -16,7 +17,7 @@ import (
 var (
 	token   string
 	pattern string
-	org     string
+	orgs    string
 	tmpl    string
 )
 
@@ -29,7 +30,7 @@ func init() {
 	}
 	flag.StringVar(&token, "t", "", "github personal token")
 	flag.StringVar(&pattern, "p", ".*", "reggex pattern for filtering repos by name")
-	flag.StringVar(&org, "o", "devopsfaith", "github org")
+	flag.StringVar(&orgs, "o", "devopsfaith", "comma separated list of github orgs")
 	flag.StringVar(&tmpl, "f", defaultTemplate, "template for render the results")
 }
 
@@ -52,33 +53,36 @@ func main() {
 		Type:        "public",
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
-	repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
-
-	if err != nil {
-		fmt.Println("error:", err.Error())
-	}
-
-	re := regexp.MustCompile(pattern)
 
 	contributorsMap := map[string]github.Contributor{}
-	for k, v := range repos {
-		if !re.MatchString(*v.Name) {
-			continue
+	for _, org := range strings.Split(orgs, ",") {
+		repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
+
+		if err != nil {
+			fmt.Println("error:", err.Error())
 		}
 
-		fmt.Println("repo", k, *v.Name)
-		css, _, err := client.Repositories.ListContributorsStats(ctx, org, *v.Name)
-		if err != nil {
-			fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
-		}
-		for _, cs := range css {
-			if cs.Author.Contributions == nil {
-				cs.Author.Contributions = cs.Total
+		re := regexp.MustCompile(pattern)
+
+		for k, v := range repos {
+			if !re.MatchString(*v.Name) {
+				continue
 			}
-			if c, ok := contributorsMap[*cs.Author.Login]; ok {
-				*cs.Author.Contributions += *c.Contributions
+
+			fmt.Println("repo", k, *v.Name)
+			css, _, err := client.Repositories.ListContributorsStats(ctx, org, *v.Name)
+			if err != nil {
+				fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
 			}
-			contributorsMap[*cs.Author.Login] = *cs.Author
+			for _, cs := range css {
+				if cs.Author.Contributions == nil {
+					cs.Author.Contributions = cs.Total
+				}
+				if c, ok := contributorsMap[*cs.Author.Login]; ok {
+					*cs.Author.Contributions += *c.Contributions
+				}
+				contributorsMap[*cs.Author.Login] = *cs.Author
+			}
 		}
 	}
 

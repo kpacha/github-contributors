@@ -72,6 +72,12 @@ func main() {
 			fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
 		}
 		for _, cs := range css {
+			if cs.Author.Contributions == nil {
+				cs.Author.Contributions = cs.Total
+			}
+			if c, ok := contributorsMap[*cs.Author.Login]; ok {
+				*cs.Author.Contributions += *c.Contributions
+			}
 			contributorsMap[*cs.Author.Login] = *cs.Author
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/v24/github"
 	"github.com/intel/tfortools"
@@ -54,6 +55,7 @@ func main() {
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
 
+	pending := map[string][]string{}
 	contributorsMap := map[string]github.Contributor{}
 	for _, org := range strings.Split(orgs, ",") {
 		repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
@@ -63,6 +65,7 @@ func main() {
 		}
 
 		re := regexp.MustCompile(pattern)
+		pending[org] = []string{}
 
 		for k, v := range repos {
 			if !re.MatchString(*v.Name) {
@@ -72,7 +75,29 @@ func main() {
 			fmt.Println("repo", k, *v.Name)
 			css, _, err := client.Repositories.ListContributorsStats(ctx, org, *v.Name)
 			if err != nil {
+				pending[org] = append(pending[org], *v.Name)
 				fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
+			}
+			for _, cs := range css {
+				if cs.Author.Contributions == nil {
+					cs.Author.Contributions = cs.Total
+				}
+				if c, ok := contributorsMap[*cs.Author.Login]; ok {
+					*cs.Author.Contributions += *c.Contributions
+				}
+				contributorsMap[*cs.Author.Login] = *cs.Author
+			}
+		}
+	}
+
+	<-time.After(time.Second)
+
+	for org, repos := range pending {
+		for _, v := range repos {
+			fmt.Println("second attempt: repo", org, v)
+			css, _, err := client.Repositories.ListContributorsStats(ctx, org, v)
+			if err != nil {
+				fmt.Printf("error collecting stats for repo %s: %s\n", v, err.Error())
 			}
 			for _, cs := range css {
 				if cs.Author.Contributions == nil {

@@ -113,69 +113,73 @@ func main() {
 
 	contributors := []Contributor{}
 	for _, c := range contributorsMap {
-		contributor := Contributor{}
-		if c.Login != nil {
-			contributor.Login = *c.Login
-		}
-		if c.ID != nil {
-			contributor.ID = *c.ID
-		}
-		if c.AvatarURL != nil {
-			contributor.AvatarURL = *c.AvatarURL
-		}
-		if c.GravatarID != nil {
-			contributor.GravatarID = *c.GravatarID
-		}
-		if c.URL != nil {
-			contributor.URL = *c.URL
-		}
-		if c.HTMLURL != nil {
-			contributor.HTMLURL = *c.HTMLURL
-		}
-		if c.FollowersURL != nil {
-			contributor.FollowersURL = *c.FollowersURL
-		}
-		if c.FollowingURL != nil {
-			contributor.FollowingURL = *c.FollowingURL
-		}
-		if c.GistsURL != nil {
-			contributor.GistsURL = *c.GistsURL
-		}
-		if c.StarredURL != nil {
-			contributor.StarredURL = *c.StarredURL
-		}
-		if c.SubscriptionsURL != nil {
-			contributor.SubscriptionsURL = *c.SubscriptionsURL
-		}
-		if c.OrganizationsURL != nil {
-			contributor.OrganizationsURL = *c.OrganizationsURL
-		}
-		if c.ReposURL != nil {
-			contributor.ReposURL = *c.ReposURL
-		}
-		if c.EventsURL != nil {
-			contributor.EventsURL = *c.EventsURL
-		}
-		if c.ReceivedEventsURL != nil {
-			contributor.ReceivedEventsURL = *c.ReceivedEventsURL
-		}
-		if c.Type != nil {
-			contributor.Type = *c.Type
-		}
-		if c.SiteAdmin != nil {
-			contributor.SiteAdmin = *c.SiteAdmin
-		}
-		if c.Contributions != nil {
-			contributor.Contributions = *c.Contributions
-		}
-		contributors = append(contributors, contributor)
+		contributors = append(contributors, newContributor(c))
 	}
 
 	fmt.Println("dumping contributor stats", len(contributors))
 
 	if err := tfortools.OutputToTemplate(os.Stdout, "contributors", tmpl, contributors, nil); err != nil {
-		fmt.Printf("error executing template:", err)
+		fmt.Println("error executing template:", err.Error())
 	}
+}
+
+func newContributor(c github.Contributor) Contributor {
+	contributor := Contributor{}
+	if c.Login != nil {
+		contributor.Login = *c.Login
+	}
+	if c.ID != nil {
+		contributor.ID = *c.ID
+	}
+	if c.AvatarURL != nil {
+		contributor.AvatarURL = *c.AvatarURL
+	}
+	if c.GravatarID != nil {
+		contributor.GravatarID = *c.GravatarID
+	}
+	if c.URL != nil {
+		contributor.URL = *c.URL
+	}
+	if c.HTMLURL != nil {
+		contributor.HTMLURL = *c.HTMLURL
+	}
+	if c.FollowersURL != nil {
+		contributor.FollowersURL = *c.FollowersURL
+	}
+	if c.FollowingURL != nil {
+		contributor.FollowingURL = *c.FollowingURL
+	}
+	if c.GistsURL != nil {
+		contributor.GistsURL = *c.GistsURL
+	}
+	if c.StarredURL != nil {
+		contributor.StarredURL = *c.StarredURL
+	}
+	if c.SubscriptionsURL != nil {
+		contributor.SubscriptionsURL = *c.SubscriptionsURL
+	}
+	if c.OrganizationsURL != nil {
+		contributor.OrganizationsURL = *c.OrganizationsURL
+	}
+	if c.ReposURL != nil {
+		contributor.ReposURL = *c.ReposURL
+	}
+	if c.EventsURL != nil {
+		contributor.EventsURL = *c.EventsURL
+	}
+	if c.ReceivedEventsURL != nil {
+		contributor.ReceivedEventsURL = *c.ReceivedEventsURL
+	}
+	if c.Type != nil {
+		contributor.Type = *c.Type
+	}
+	if c.SiteAdmin != nil {
+		contributor.SiteAdmin = *c.SiteAdmin
+	}
+	if c.Contributions != nil {
+		contributor.Contributions = *c.Contributions
+	}
+	return contributor
 }
 
 type Contributor struct {

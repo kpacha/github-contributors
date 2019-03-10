@@ -50,5 +50,5 @@ Usage: github-contributors [-f template] [-p pattern] [-o organization] [-t toke
 This project includes the tfortools lib, so there are tons of functions and macros available:
 
 ```
-github-contributors -o "devopsfaith" -p "krakend" -f "{{table (cols (sort . "Contributions" "dsc") "Login" "Contributions")}}"
+github-contributors -o "devopsfaith" -p "krakend" -f '{{table (cols (sort . "Contributions" "dsc") "Login" "Contributions")}}'
 ```

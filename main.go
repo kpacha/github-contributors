@@ -27,7 +27,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [-f template] [-p pattern] [-o organization] [-t token]\n", os.Args[0])
 		flag.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, tfortools.GenerateUsageUndecorated([][]string{}))
+		fmt.Fprintln(os.Stderr, tfortools.GenerateUsageUndecorated([]Contributor{}))
 	}
 	flag.StringVar(&token, "t", "", "github personal token")
 	flag.StringVar(&pattern, "p", ".*", "reggex pattern for filtering repos by name")

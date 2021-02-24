@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -57,6 +58,7 @@ func main() {
 
 	pending := map[string][]string{}
 	contributorsMap := map[string]github.Contributor{}
+	var accumulated int
 	for _, org := range strings.Split(orgs, ",") {
 		repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
 
@@ -67,17 +69,19 @@ func main() {
 		re := regexp.MustCompile(pattern)
 		pending[org] = []string{}
 
-		for k, v := range repos {
+		for _, v := range repos {
 			if !re.MatchString(*v.Name) {
 				continue
 			}
 
-			fmt.Println("repo", k, *v.Name)
+			fmt.Printf("repo #%02d: %s/%s\n", accumulated, org, *v.Name)
 			css, _, err := client.Repositories.ListContributorsStats(ctx, org, *v.Name)
 			if err != nil {
 				pending[org] = append(pending[org], *v.Name)
 				fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
+				continue
 			}
+			accumulated++
 			for _, cs := range css {
 				if cs.Author.Contributions == nil {
 					cs.Author.Contributions = cs.Total
@@ -116,7 +120,14 @@ func main() {
 		contributors = append(contributors, newContributor(c))
 	}
 
-	fmt.Println("dumping contributor stats", len(contributors))
+	sort.Slice(contributors, func(i, j int) bool {
+		if contributors[i].Contributions == contributors[j].Contributions {
+			return contributors[i].Login < contributors[j].Login
+		}
+		return contributors[i].Contributions > contributors[j].Contributions
+	})
+
+	fmt.Printf("dumping contributor stats for %d contributors\n", len(contributors))
 
 	if err := tfortools.OutputToTemplate(os.Stdout, "contributors", tmpl, contributors, nil); err != nil {
 		fmt.Println("error executing template:", err.Error())

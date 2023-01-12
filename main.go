@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -39,6 +40,8 @@ func init() {
 func main() {
 	flag.Parse()
 
+	log.SetOutput(os.Stderr)
+
 	ctx := context.Background()
 	var tc *http.Client
 
@@ -63,7 +66,7 @@ func main() {
 		repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
 
 		if err != nil {
-			fmt.Println("error:", err.Error())
+			log.Println("error:", err.Error())
 		}
 
 		re := regexp.MustCompile(pattern)
@@ -74,11 +77,11 @@ func main() {
 				continue
 			}
 
-			fmt.Printf("repo #%02d: %s/%s\n", accumulated, org, *v.Name)
+			log.Printf("repo #%02d: %s/%s\n", accumulated, org, *v.Name)
 			css, _, err := client.Repositories.ListContributorsStats(ctx, org, *v.Name)
 			if err != nil {
 				pending[org] = append(pending[org], *v.Name)
-				fmt.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
+				log.Printf("error collecting stats for repo %s: %s\n", *v.Name, err.Error())
 				continue
 			}
 			accumulated++
@@ -94,24 +97,34 @@ func main() {
 		}
 	}
 
-	<-time.After(time.Second)
+	for len(pending) > 0 {
+		<-time.After(time.Second)
 
-	for org, repos := range pending {
-		for _, v := range repos {
-			fmt.Println("second attempt: repo", org, v)
-			css, _, err := client.Repositories.ListContributorsStats(ctx, org, v)
-			if err != nil {
-				fmt.Printf("error collecting stats for repo %s: %s\n", v, err.Error())
-			}
-			for _, cs := range css {
-				if cs.Author.Contributions == nil {
-					cs.Author.Contributions = cs.Total
+		for org, repos := range pending {
+			next := []string{}
+			for _, v := range repos {
+				log.Println("retrying repo", org, v)
+				css, _, err := client.Repositories.ListContributorsStats(ctx, org, v)
+				if err != nil {
+					log.Printf("error collecting stats for repo %s: %s\n", v, err.Error())
+					next = append(next, v)
+					continue
 				}
-				if c, ok := contributorsMap[*cs.Author.Login]; ok {
-					*cs.Author.Contributions += *c.Contributions
+				for _, cs := range css {
+					if cs.Author.Contributions == nil {
+						cs.Author.Contributions = cs.Total
+					}
+					if c, ok := contributorsMap[*cs.Author.Login]; ok {
+						*cs.Author.Contributions += *c.Contributions
+					}
+					contributorsMap[*cs.Author.Login] = *cs.Author
 				}
-				contributorsMap[*cs.Author.Login] = *cs.Author
 			}
+			if len(next) == 0 {
+				delete(pending, org)
+				continue
+			}
+			pending[org] = next
 		}
 	}
 
@@ -127,10 +140,10 @@ func main() {
 		return contributors[i].Contributions > contributors[j].Contributions
 	})
 
-	fmt.Printf("dumping contributor stats for %d contributors\n", len(contributors))
+	log.Printf("dumping contributor stats for %d contributors\n", len(contributors))
 
 	if err := tfortools.OutputToTemplate(os.Stdout, "contributors", tmpl, contributors, nil); err != nil {
-		fmt.Println("error executing template:", err.Error())
+		log.Println("error executing template:", err.Error())
 	}
 }
 
